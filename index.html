@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlassChat</title>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: rgba(31, 38, 135, 0.08);
+            --text-main: #1d1d1f;
+            --text-sub: #86868b;
+            --accent: #0071e3;
+            --accent-glow: rgba(0, 113, 227, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        /* Ambient Liquid Blobs in Background */
+        .blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(180deg, rgba(102, 126, 234, 0.5) 0%, rgba(163, 193, 237, 0.5) 100%);
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            animation: float 20s infinite ease-in-out;
+        }
+        .blob-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(180deg, rgba(246, 211, 101, 0.5) 0%, rgba(253, 160, 133, 0.5) 100%);
+            bottom: 10%;
+            right: 10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-40px) scale(1.1); }
+        }
+
+        /* Core Glass Container */
+        .glass-container {
+            width: 100%;
+            max-width: 480px;
+            height: 850px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid var(--glass-border);
+            border-radius: 38px;
+            box-shadow: 0 8px 32px 0 var(--glass-shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            padding: 30px 24px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Typography & Inputs */
+        h2 {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-sub);
+            font-size: 15px;
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group internal-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-sub);
+            font-size: 20px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            outline: none;
+            font-size: 16px;
+            color: var(--text-main);
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        input:focus, textarea:focus {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        button.btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        button.btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .switch-mode-text {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--text-sub);
+        }
+
+        .switch-mode-text span {
+            color: var(--accent);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* App Navbar */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        /* Hide scrollbars */
+        .tab-content::-webkit-scrollbar { display: none; }
+
+        .nav-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            height: 64px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-item span.material-icons-round {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        /* Lists & Profiles */
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-card:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .pfp-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #85a3ff, #e0c3fc);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            margin-right: 14px;
+            border: 2px solid white;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 16px;
+        }
+
+        .user-username {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        /* Profile Editing Elements */
+        .profile-edit-avatar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .profile-edit-avatar .pfp-circle {
+            width: 90px;
+            height: 90px;
+            font-size: 32px;
+            margin-right: 0;
+            margin-bottom: 12px;
+        }
+
+        /* Chat view UI Overlay */
+        .chat-view-header {
+            display: flex;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 16px;
+        }
+        
+        .chat-view-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-bottom: 20px;
+        }
+        .chat-view-messages::-webkit-scrollbar { display: none; }
+
+        .bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+        .bubble.me {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bubble.them {
+            background: rgba(255,255,255,0.5);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="blob"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="glass-container">
+        
+        <div id="screen-auth" class="screen active">
+            <h2 id="auth-title">Welcome</h2>
+            <p class="subtitle" id="auth-subtitle">Sign up to explore dynamic glass spaces.</p>
+            
+            <div class="input-group" id="pane-name">
+                <span class="material-icons-round">person</span>
+                <input type="text" id="auth-name" placeholder="Full Name">
+            </div>
+            <div class="input-group">
+                <span class="material-icons-round">alternate_email</span>
+                <input type="text" id="auth-username" placeholder="Username">
+            </div>
+            <div class="input-group">
+                <span class="material-icons-round">lock</span>
+                <input type="password" id="auth-pass" placeholder="Password">
+            </div>
+            
+            <button class="btn-primary" onclick="handleAuth()" id="auth-btn">Create Account</button>
+            <p class="switch-mode-text" id="auth-switch">Already have an account? <span onclick="toggleAuthMode()">Log In</span></p>
+        </div>
+
+        <div id="screen-home" class="screen">
+            
+            <div id="tab-search" class="tab-content">
+                <div class="app-header"><h2>Explore</h2></div>
+                <div class="input-group">
+                    <span class="material-icons-round">search</span>
+                    <input type="text" id="search-input" placeholder="Search usernames..." oninput="runSearch()">
+                </div>
+                <div id="search-results"></div>
+            </div>
+
+            <div id="tab-chat" class="tab-content" style="display:none;">
+                <div class="app-header"><h2>Messages</h2></div>
+                <div id="chats-list"></div>
+            </div>
+
+            <div id="tab-profile" class="tab-content" style="display:none;">
+                <div class="app-header"><h2>Settings</h2></div>
+                <div class="profile-edit-avatar">
+                    <div class="pfp-circle" id="prof-pfp">U</div>
+                </div>
+                <div class="input-group">
+                    <span class="material-icons-round">badge</span>
+                    <input type="text" id="prof-name" placeholder="Display Name">
+                </div>
+                <div class="input-group">
+                    <span class="material-icons-round">notes</span>
+                    <textarea id="prof-bio" placeholder="Write a short bio..." style="resize: none; height: 80px; padding-left: 48px;"></textarea>
+                </div>
+                <button class="btn-primary" style="width:100%" onclick="saveProfile()">Save Changes</button>
+                <button class="btn-primary" style="width:100%; background: rgba(255,59,48,0.15); color: #ff3b30; box-shadow:none; margin-top:12px;" onclick="logout()">Log Out</button>
+            </div>
+
+            <div class="nav-bar">
+                <div class="nav-item active" id="nav-search" onclick="switchTab('search')">
+                    <span class="material-icons-round">search</span>Search
+                </div>
+                <div class="nav-item" id="nav-chat" onclick="switchTab('chat')">
+                    <span class="material-icons-round">chat_bubble</span>Chats
+                </div>
+                <div class="nav-item" id="nav-profile" onclick="switchTab('profile')">
+                    <span class="material-icons-round">account_circle</span>Profile
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-chatview" class="screen">
+            <div class="chat-view-header">
+                <span class="material-icons-round" style="cursor:pointer; margin-right:12px; color: var(--accent);" onclick="exitChat()">arrow_back_ios</span>
+                <div class="pfp-circle" id="chatview-pfp" style="width:36px; height:36px; font-size:14px;">T</div>
+                <div class="user-info">
+                    <div class="user-name" id="chatview-name" style="font-size:15px;">Target User</div>
+                </div>
+            </div>
+            <div class="chat-view-messages" id="chat-msg-area"></div>
+            <div class="input-group" style="margin-bottom:0; display:flex; gap:8px;">
+                <input type="text" id="chat-input" placeholder="Message..." style="padding-left:16px;">
+                <button class="btn-primary" style="padding:0 20px; border-radius:16px;" onclick="sendMessage()">
+                    <span class="material-icons-round" style="margin:0; vertical-align:middle;">send</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let isLoginMode = false;
+        let currentUser = null;
+        let activeChatUser = null;
+
+        // Mock Database Initialization
+        if(!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify([
+                {name: "Jane Doe", username: "jane", pass: "123", bio: "Designing interfaces.", pfp: ""},
+                {name: "Alex River", username: "alex", pass: "123", bio: "Exploring spatial logic.", pfp: ""}
+            ]));
+        }
+        if(!localStorage.getItem('messages')) localStorage.setItem('messages', JSON.stringify([]));
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Welcome Back" : "Welcome";
+            document.getElementById('auth-subtitle').innerText = isLoginMode ? "Log in to check your space." : "Sign up to explore dynamic glass spaces.";
+            document.getElementById('pane-name').style.display = isLoginMode ? "none" : "block";
+            document.getElementById('auth-btn').innerText = isLoginMode ? "Log In" : "Create Account";
+            document.getElementById('auth-switch').innerHTML = isLoginMode ? `Don't have an account? <span onclick="toggleAuthMode()">Sign Up</span>` : `Already have an account? <span onclick="toggleAuthMode()">Log In</span>`;
+        }
+
+        function handleAuth() {
+            let uList = JSON.parse(localStorage.getItem('users'));
+            let nameInput = document.getElementById('auth-name').value;
+            let usernameInput = document.getElementById('auth-username').value.trim().toLowerCase();
+            let passInput = document.getElementById('auth-pass').value;
+
+            if(!usernameInput || !passInput || (!isLoginMode && !nameInput)) return alert("Fill out all fields.");
+
+            if(isLoginMode) {
+                let user = uList.find(x => x.username === usernameInput && x.pass === passInput);
+                if(user) { currentUser = user; launchApp(); } else { alert("Invalid credentials."); }
+            } else {
+                if(uList.some(x => x.username === usernameInput)) return alert("Username taken.");
+                let newUser = {name: nameInput, username: usernameInput, pass: passInput, bio: "Hey there!", pfp: ""};
+                uList.push(newUser);
+                localStorage.setItem('users', JSON.stringify(uList));
+                currentUser = newUser;
+                launchApp();
+            }
+        }
+
+        function launchApp() {
+            document.getElementById('screen-auth').classList.remove('active');
+            document.getElementById('screen-home').classList.add('active');
+            switchTab('search');
+            updateProfileTabValues();
+            renderChatsList();
+        }
+
+        function switchTab(tabId) {
+            ['search', 'chat', 'profile'].forEach(t => {
+                document.getElementById(`tab-${t}`).style.display = (t === tabId) ? 'block' : 'none';
+                document.getElementById(`nav-${t}`).classList.toggle('active', t === tabId);
+            });
+            if(tabId === 'chat') renderChatsList();
+        }
+
+        function runSearch() {
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let uList = JSON.parse(localStorage.getItem('users'));
+            let container = document.getElementById('search-results');
+            container.innerHTML = "";
+
+            if(!query) return;
+
+            uList.filter(u => u.username !== currentUser.username && (u.username.includes(query) || u.name.toLowerCase().includes(query)))
+                 .forEach(u => {
+                    container.innerHTML += `
+                        <div class="user-card" onclick="openChat('${u.username}')">
+                            <div class="pfp-circle">${u.name[0]}</div>
+                            <div class="user-info">
+                                <div class="user-name">${u.name}</div>
+                                <div class="user-username">@${u.username}</div>
+                            </div>
+                        </div>`;
+                 });
+        }
+
+        function renderChatsList() {
+            let messages = JSON.parse(localStorage.getItem('messages'));
+            let uList = JSON.parse(localStorage.getItem('users'));
+            let container = document.getElementById('chats-list');
+            container.innerHTML = "";
+
+            // Find unique users current user has interchanged messages with
+            let interactedUsernames = [...new Set(messages.filter(m => m.sender === currentUser.username || m.receiver === currentUser.username)
+                                            .map(m => m.sender === currentUser.username ? m.receiver : m.sender))];
+
+            if(interactedUsernames.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:var(--text-sub); margin-top:40px;">No chats yet. Find users in Search!</p>`;
+                return;
+            }
+
+            interactedUsernames.forEach(un => {
+                let u = uList.find(x => x.username === un);
+                if(u) {
+                    container.innerHTML += `
+                        <div class="user-card" onclick="openChat('${u.username}')">
+                            <div class="pfp-circle">${u.name[0]}</div>
+                            <div class="user-info">
+                                <div class="user-name">${u.name}</div>
+                                <div class="user-username">Click to chat</div>
+                            </div>
+                        </div>`;
+                }
+            });
+        }
+
+        function openChat(targetUsername) {
+            let uList = JSON.parse(localStorage.getItem('users'));
+            activeChatUser = uList.find(x => x.username === targetUsername);
+            
+            document.getElementById('chatview-name').innerText = activeChatUser.name;
+            document.getElementById('chatview-pfp').innerText = activeChatUser.name[0];
+            
+            document.getElementById('screen-home').classList.remove('active');
+            document.getElementById('screen-chatview').classList.add('active');
+            
+            loadMessages();
+        }
+
+        function exitChat() {
+            document.getElementById('screen-chatview').classList.remove('active');
+            document.getElementById('screen-home').classList.add('active');
+            activeChatUser = null;
+            renderChatsList();
+        }
+
+        function loadMessages() {
+            if(!activeChatUser) return;
+            let messages = JSON.parse(localStorage.getItem('messages'));
+            let area = document.getElementById('chat-msg-area');
+            area.innerHTML = "";
+
+            let conversation = messages.filter(m => 
+                (m.sender === currentUser.username && m.receiver === activeChatUser.username) ||
+                (m.sender === activeChatUser.username && m.receiver === currentUser.username)
+            );
+
+            conversation.forEach(m => {
+                let side = m.sender === currentUser.username ? 'me' : 'them';
+                area.innerHTML += `<div class="bubble ${side}">${m.text}</div>`;
+            });
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function sendMessage() {
+            let input = document.getElementById('chat-input');
+            let text = input.value.trim();
+            if(!text || !activeChatUser) return;
+
+            let messages = JSON.parse(localStorage.getItem('messages'));
+            messages.push({
+                sender: currentUser.username,
+                receiver: activeChatUser.username,
+                text: text,
+                time: Date.now()
+            });
+
+            localStorage.setItem('messages', JSON.stringify(messages));
+            input.value = "";
+            loadMessages();
+        }
+
+        function updateProfileTabValues() {
+            document.getElementById('prof-pfp').innerText = currentUser.name[0];
+            document.getElementById('prof-name').value = currentUser.name;
+            document.getElementById('prof-bio').value = currentUser.bio || "";
+        }
+
+        function saveProfile() {
+            let uList = JSON.parse(localStorage.getItem('users'));
+            let idx = uList.findIndex(x => x.username === currentUser.username);
+            
+            uList[idx].name = document.getElementById('prof-name').value;
+            uList[idx].bio = document.getElementById('prof-bio').value;
+            
+            localStorage.setItem('users', JSON.stringify(uList));
+            currentUser = uList[idx];
+            updateProfileTabValues();
+            alert("Profile configuration saved.");
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('screen-home').classList.remove('active');
+            document.getElementById('screen-auth').classList.add('active');
+            // reset fields
+            document.getElementById('auth-name').value = "";
+            document.getElementById('auth-username').value = "";
+            document.getElementById('auth-pass').value = "";
+        }
+    </script>
+</body>
+</html>
